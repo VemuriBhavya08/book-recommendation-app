@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Bookworm — Login</title>
+<style>
+body {
+  margin: 0;
+  font-family: "Poppins", sans-serif;
+  background:linear-gradient(rgba(7,9,17,0.45),rgba(7,9,17,0.35)),url('https://images.unsplash.com/photo-1524995997946-a1c2e315a42f') no-repeat center center fixed;
+  background-size: cover;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 100vh;
+}
+.login-container {
+  background: rgba(255, 255, 255, 0.15);
+  backdrop-filter: blur(10px);
+  border-radius: 15px;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+  padding: 40px;
+  width: 350px;
+  color: white;
+  text-align: center;
+}
+h2 {
+  margin-bottom: 20px;
+  font-size: 28px;
+  letter-spacing: 1px;
+}
+input {
+  width: 90%;
+  padding: 10px;
+  margin: 10px 0;
+  border: none;
+  border-radius: 8px;
+  outline: none;
+  font-size: 15px;
+}
+button {
+  background: #ff9800;
+  border: none;
+  padding: 10px 20px;
+  color: white;
+  font-size: 16px;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: 0.3s;
+  min-width: 100px;
+}
+button:hover {
+  background: #e68900;
+}
+button:disabled {
+  background: #ccc;
+  cursor: not-allowed;
+}
+p {
+  margin-top: 15px;
+  font-size: 14px;
+}
+.status {
+  margin-top: 15px;
+  padding: 10px;
+  border-radius: 8px;
+  display: none;
+}
+.error { 
+  background: rgba(255,0,0,0.1);
+  border: 1px solid rgba(255,0,0,0.2);
+}
+.success { 
+  background: rgba(0,255,0,0.1);
+  border: 1px solid rgba(0,255,0,0.2);
+}
+</style>
+</head>
+<body>
+
+<div class="login-container">
+  <h2>📚 Bookworm Login</h2>
+  <input type="email" id="email" placeholder="Enter your Gmail address" required>
+  <input type="password" id="password" placeholder="Password" required>
+  <div style="margin-top: 20px">
+    <button onclick="login()" id="loginBtn">Login</button>
+  </div>
+  <p style="margin-top: 15px; font-size: 12px;">Please contact admin for account access.</p>
+  <div id="status" class="status"></div>
+</div>
+
+<script>
+// Helper to show status messages
+function showStatus(message, isError = false) {
+  const status = document.getElementById('status');
+  const loginBtn = document.getElementById('loginBtn');
+  
+  status.textContent = message;
+  status.style.display = 'block';
+  status.className = 'status ' + (isError ? 'error' : 'success');
+  
+  loginBtn.disabled = true;
+  
+  setTimeout(() => {
+    if (!isError) {
+      status.style.display = 'none';
+    }
+    loginBtn.disabled = false;
+  }, isError ? 1000 : 2000);
+}
+
+// Login user
+async function login() {
+  const email = document.getElementById('email').value.trim();
+  const password = document.getElementById('password').value.trim();
+
+  // Validate inputs
+  if (!email || !password) {
+    showStatus('Please enter both email and password', true);
+    return;
+  }
+
+  const loginBtn = document.getElementById('loginBtn');
+  loginBtn.disabled = true;
+
+  try {
+    const res = await fetch('http://localhost:4000/api/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, password })
+    });
+
+    if (!res.ok) {
+      throw new Error('Login failed');
+    }
+
+    const data = await res.json();
+    localStorage.setItem('bookworm_token', data.token);
+    localStorage.setItem('bookwormUser', email);
+    showStatus('Login successful! Redirecting...', false);
+    window.location.href = 'book recommendation app.html';
+    
+  } catch (err) {
+    console.error('Login error:', err);
+    showStatus('Login failed. Please check your credentials.', true);
+    loginBtn.disabled = false;
+  }
+}
+
+// Auto-redirect if already logged in
+if (localStorage.getItem('bookworm_token')) {
+  window.location.href = 'book recommendation app.html';
+}
+</script>
+
+</body>
+</html>

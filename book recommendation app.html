@@ -1,0 +1,543 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Bookworm — Full App (Chat, Ratings, Reviews)</title>
+  <style>
+    :root{
+      --accent:#7c3aed;
+      --card:#ffffff;
+      --muted:#7b8794;
+      --text:#0b1220;
+      --star:#f6c543;
+      --star-empty:#ddd;
+      --ghost-border-light: rgba(0,0,0,0.08);
+      --ghost-border-dark: rgba(255,255,255,0.12);
+    }
+    body.dark{
+      --accent:#60a5fa;
+      --card:#0b1220;
+      --muted:#9aa6bd;
+      --text:#e6eefc;
+    }
+    *{box-sizing:border-box}
+    html,body{height:100%;margin:0;font-family:Inter,system-ui,Arial;background:transparent}
+    .hidden{display:none!important}
+
+    /* Hero background */
+    .hero {
+      position: fixed;
+      inset: 0;
+      z-index: -2;
+      background: linear-gradient(rgba(7,9,17,0.45),rgba(7,9,17,0.35)),url('https://images.unsplash.com/photo-1524995997946-a1c2e315a42f') no-repeat center center fixed;
+      background-size: cover;
+      background-position: center;
+      background-repeat: no-repeat;
+    }
+
+    header{display:flex;align-items:center;gap:12px;padding:18px 28px;color:white;position:relative}
+    header h1{margin:0;font-size:20px}
+    .header-right{margin-left:auto;display:flex;gap:8px;align-items:center}
+
+    .btn{background:var(--accent);color:white;border:none;padding:8px 12px;border-radius:10px;cursor:pointer}
+    .ghost{background:transparent;border:1px solid var(--ghost-border-light);color:var(--text);padding:8px 10px;border-radius:10px;cursor:pointer}
+    body.dark .ghost{border:1px solid var(--ghost-border-dark);color:var(--text)}
+
+    /* Ensure ghost buttons inside chat bubbles are visible */
+    .msg .ghost{background:transparent;border:1px solid rgba(0,0,0,0.08);color:inherit;padding:6px 8px;border-radius:6px}
+    body.dark .msg .ghost{border:1px solid rgba(255,255,255,0.12);color:inherit}
+
+    .search-wrap{max-width:1100px;margin:28px auto;padding:22px;border-radius:14px;background:rgba(255,255,255,0.06);backdrop-filter:blur(6px)}
+    .search-row{display:flex;gap:12px;align-items:center;justify-content:center}
+    input[type=search]{flex:1;min-width:320px;padding:12px 14px;border-radius:10px;border:0;outline:none;font-size:16px}
+    .center-controls{display:flex;gap:10px;align-items:center;justify-content:center;margin-top:10px}
+    select{padding:10px;border-radius:10px;border:0;background:rgba(255,255,255,0.06);color:white}
+
+    .container{max-width:1100px;margin:12px auto;padding:0 16px}
+    .note{color:var(--muted);margin:6px 0}
+
+    .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:14px}
+    .bookCard{background:var(--card);border-radius:12px;overflow:hidden;box-shadow:0 12px 30px rgba(2,6,23,0.12);display:flex;flex-direction:column;cursor:pointer}
+    .bookCard img{width:100%;height:240px;object-fit:cover}
+    .card-body{padding:12px;display:flex;flex-direction:column;flex:1}
+    h4{margin:0;font-size:15px}
+    p{margin:6px 0;color:var(--muted);font-size:13px}
+    .card-actions{display:flex;gap:8px;margin-top:auto}
+    .small{padding:6px 8px;border-radius:8px;border:0;cursor:pointer}
+
+    .rating-inline{display:inline-flex;gap:6px;align-items:center}
+    .star{color:var(--star);font-size:14px}
+    .star-empty{color:var(--star-empty);font-size:14px}
+    .rating-bold{font-weight:700;margin-left:6px}
+
+    .drawer{position:fixed;right:18px;bottom:18px;width:360px;background:var(--card);border-radius:12px;padding:12px;box-shadow:0 18px 60px rgba(2,6,23,0.18);max-height:72vh;overflow:auto}
+    .pagination{display:flex;justify-content:center;gap:8px;margin:18px 0}
+
+    .chat-btn{position:fixed;left:18px;bottom:18px;background:var(--accent);color:#fff;padding:12px 14px;border-radius:999px;border:none;cursor:pointer;z-index:1400}
+    .chat-window{position:fixed;left:18px;bottom:78px;width:360px;background:var(--card);border-radius:12px;padding:12px;box-shadow:0 18px 60px rgba(2,6,23,0.18);z-index:1400}
+    .chat-window .messages{max-height:320px;overflow:auto;margin-bottom:8px}
+    .msg{padding:8px;border-radius:8px;margin-bottom:8px;max-width:85%}
+    .msg.user{background:#0b2546;color:white;margin-left:auto}
+    .msg.bot{background:#eef2ff;color:#0b1220}
+    .chat-window input{width:100%;padding:10px;border-radius:8px;border:1px solid rgba(0,0,0,0.06)}
+    textarea{font-family:inherit}
+
+    .review-list{margin-top:10px;border-top:1px dashed rgba(0,0,0,0.06);padding-top:10px}
+    .review{padding:8px;border-radius:8px;background:rgba(0,0,0,0.03);margin-bottom:8px}
+    .review .meta{font-size:12px;color:var(--muted);margin-bottom:6px}
+    .review .text{white-space:pre-wrap}
+    .star-input{display:inline-flex;gap:6px;align-items:center}
+    .star-input .star-btn{cursor:pointer;font-size:22px;background:transparent;border:0;padding:2px}
+    @media(max-width:760px){ .search-row{flex-direction:column} .drawer{right:8px;left:8px;width:auto} .chat-window{left:8px;right:8px;width:auto} }
+  </style>
+</head>
+<body>
+  <div class="hero"></div>
+
+  <header>
+    <h1 style="color:white">📚 Bookworm</h1>
+    <div class="header-right">
+      <button id="toggleTheme" class="ghost">Toggle Theme</button>
+      <button id="openReading" class="btn">Reading List</button>
+      <button id="logoutBtn" class="ghost" style="margin-left:8px;background:#ff4444;color:white;border:none;">Logout</button>
+    </div>
+  </header>
+
+  <div class="search-wrap">
+    <div style="text-align:center;color:white">
+      <h2 style="margin:0">Find your next favorite book</h2>
+      <p style="margin:6px 0;color:#0b1220"><b>Search by title, author, or topic — or use the chat.</b></p>
+    </div>
+
+    <div class="search-row">
+      <input id="searchInput" type="search" placeholder="Search books e.g. Dune, Tolstoy, magic realism..." aria-label="Search books">
+    </div>
+
+    <div class="center-controls">
+      <select id="genreSelect"><option value="">All Genres</option><option>Fantasy</option><option>Science Fiction</option><option>Mystery</option><option>Romance</option><option>History</option><option>Biography</option><option>Children</option><option>Nonfiction</option></select>
+      <select id="modeSelect"><option value="any">Any Mode</option><option value="ebooks">Ebooks only</option><option value="cover">Has cover only</option></select>
+      <select id="sortSelect"><option value="relevance">Sort: Relevance</option><option value="title">Title A–Z</option><option value="year_desc">Year (new→old)</option><option value="year_asc">Year (old→new)</option></select>
+      <button id="clearFilters" class="ghost">Clear</button>
+    </div>
+  </div>
+
+  <div class="container">
+    <div class="note" id="status">Ready</div>
+    <div id="bookGrid" class="grid"></div>
+    <div id="noResults" class="note hidden">No books found</div>
+
+    <div class="pagination">
+      <button id="prevPage" class="ghost">◀ Prev</button>
+      <span id="pageInfo" class="note"></span>
+      <button id="nextPage" class="ghost">Next ▶</button>
+    </div>
+  </div>
+
+  <div id="readingDrawer" class="drawer hidden">
+    <h4>Your Reading List</h4>
+    <div id="listItems"></div>
+    <div style="display:flex;gap:8px;margin-top:8px">
+      <button id="clearList" class="btn">Clear</button>
+      <button id="exportList" class="ghost">Export JSON</button>
+    </div>
+  </div>
+
+  <button id="chatToggle" class="chat-btn">💬 Chat</button>
+  <div id="chatWindow" class="chat-window hidden">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+      <strong>Book Assistant</strong>
+      <button id="closeChat" class="ghost">Close</button>
+    </div>
+    <div class="messages" id="chatMessages"></div>
+    <input id="chatInput" placeholder='Try: "recommend fantasy" or "similar to Dune"'>
+  </div>
+
+<script>
+// ---------- Elements & state ----------
+const searchInput = document.getElementById('searchInput');
+const genreSelect = document.getElementById('genreSelect');
+const modeSelect = document.getElementById('modeSelect');
+const sortSelect = document.getElementById('sortSelect');
+const bookGrid = document.getElementById('bookGrid');
+const status = document.getElementById('status');
+const noResults = document.getElementById('noResults');
+const prevPage = document.getElementById('prevPage');
+const nextPage = document.getElementById('nextPage');
+const pageInfo = document.getElementById('pageInfo');
+const readingDrawer = document.getElementById('readingDrawer');
+const listItems = document.getElementById('listItems');
+const openReading = document.getElementById('openReading');
+const clearListBtn = document.getElementById('clearList');
+const exportListBtn = document.getElementById('exportList');
+const toggleTheme = document.getElementById('toggleTheme');
+const clearFiltersBtn = document.getElementById('clearFilters');
+const chatToggle = document.getElementById('chatToggle');
+const chatWindow = document.getElementById('chatWindow');
+const chatMessages = document.getElementById('chatMessages');
+const chatInput = document.getElementById('chatInput');
+const closeChat = document.getElementById('closeChat');
+const logoutBtn = document.getElementById('logoutBtn');
+
+let currentPage = 1, totalPages = 1, lastQuery = '';
+let readingList = JSON.parse(localStorage.getItem('bookworm_reading')||'[]');
+let reviews = JSON.parse(localStorage.getItem('bookworm_reviews')||'{}'); // { bookKey: [ {id,ts,text,rating} ] }
+
+// ---------- Utilities ----------
+function setStatus(t){ status.textContent = t }
+function makeCover(id){ return id?`https://covers.openlibrary.org/b/id/${id}-L.jpg`:'https://via.placeholder.com/150x240?text=No+Cover' }
+function escapeHtml(s){ if(s===null||s===undefined) return ''; return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":"&#39;"}[c])); }
+
+// ---------- Reviews & Ratings ----------
+function saveReviews(){ localStorage.setItem('bookworm_reviews', JSON.stringify(reviews)); }
+function getReviewsFor(key){ return (reviews[key]||[]).slice().sort((a,b)=>b.ts-a.ts); }
+function addReview(bookKey, text, rating){
+  if(!text || !text.trim()) return null;
+  const r = { id: String(Date.now()) + Math.floor(Math.random()*1000), ts: Date.now(), text: String(text).trim(), rating: Number(rating)||0 };
+  reviews[bookKey]=reviews[bookKey]||[]; reviews[bookKey].push(r); saveReviews(); return r;
+}
+function removeReview(bookKey, id){ if(!reviews[bookKey]) return; reviews[bookKey]=reviews[bookKey].filter(r=>r.id!==id); if(reviews[bookKey].length===0) delete reviews[bookKey]; saveReviews(); }
+function editReview(bookKey, id, newText, newRating){ if(!reviews[bookKey]) return; const r = reviews[bookKey].find(x=>x.id===id); if(!r) return; r.text = String(newText).trim(); r.rating = Number(newRating)||0; r.ts = Date.now(); saveReviews(); }
+function getAverageRating(key){ const rv = reviews[key]||[]; if(!rv.length) return 0; const sum = rv.reduce((s,x)=>s+(Number(x.rating)||0),0); return +(sum/rv.length).toFixed(2); }
+
+// Deterministic seeding for books (at least 4 reviews)
+const SAMPLE_REVIEWS = [
+  "Loved the characters and pacing — great read.",
+  "Really engaging; would recommend to friends.",
+  "Beautiful language, a bit slow in the middle.",
+  "Excellent worldbuilding and memorable scenes.",
+  "A touching story with strong themes.",
+  "Couldn't put it down — compelling.",
+  "Solid read, predictable at times but enjoyable.",
+  "Remarkable prose and thoughtful character arcs."
+];
+function seededRandom(seed){
+  let h = 2166136261 >>> 0;
+  for(let i=0;i<seed.length;i++) h = Math.imul(h ^ seed.charCodeAt(i), 16777619) >>> 0;
+  return function(){ h += 0x6D2B79F5; let t = Math.imul(h ^ (h >>> 15), 1 | h); t ^= t + Math.imul(t ^ (t >>> 7), 61 | t); return ((t ^ (t >>> 14)) >>> 0) / 4294967296; };
+}
+function seedReviewsForDocs(docs){
+  if(!docs || !docs.length) return;
+  docs.forEach(doc=>{
+    const key = doc.key;
+    if(!key) return;
+    const existing = reviews[key] || [];
+    if(existing.length >= 4) return;
+    const rnd = seededRandom(key);
+    reviews[key] = reviews[key] || [];
+    const needed = Math.max(4 - reviews[key].length, 0);
+    for(let i=0;i<needed;i++){
+      const idx = Math.floor(rnd()*SAMPLE_REVIEWS.length);
+      const text = SAMPLE_REVIEWS[idx];
+      const rating = Math.max(1, Math.min(5, Math.round(rnd()*4 + 1)));
+      const r = { id: 'seed_'+String(Date.now())+'_'+Math.floor(rnd()*100000), ts: Date.now() - Math.floor(rnd()*10000000), text, rating };
+      reviews[key].push(r);
+    }
+  });
+  saveReviews();
+}
+
+/* ---------- Open Library Fetch helpers ---------- */
+async function fetchSearch(query, page=1, limit=24, ebooks=false){
+  const params = new URLSearchParams({ 
+    q: query || 'bestsellers',
+    page: String(page),
+    limit: String(limit),
+    mode: 'everything'
+  });
+  if (ebooks) params.set('has_fulltext', 'true');
+  
+  const res = await fetch('https://openlibrary.org/search.json?' + params.toString());
+  if(!res.ok) throw new Error('Network error');
+
+  return await res.json();
+}
+async function fetchUntil({query, minCount=10, ebooks=false, genre=null, maxPages=6}){
+  const collected = []; const seen = new Set(); let page=1;
+  while(collected.length < minCount && page<=maxPages){
+    const d = await fetchSearch(query, page, 24, ebooks); const docs = d.docs || [];
+    for(const doc of docs){ if(!doc.key) continue; if(seen.has(doc.key)) continue;
+      if(genre){ const subs = (doc.subject||[]).map(x=>String(x).toLowerCase()); if(!subs.some(s=>s.includes(String(genre).toLowerCase()))) continue }
+      if(ebooks && !doc.has_fulltext) continue;
+      if(modeSelect.value==='cover' && !(doc.cover_i||doc.cover_id)) continue;
+      collected.push(doc); seen.add(doc.key); if(collected.length>=minCount) break;
+    }
+    if(!docs.length) break; page++;
+  }
+  return {collected};
+}
+function getShortDescFromDoc(doc){
+  if(!doc) return '';
+  if(doc.first_sentence){ if(typeof doc.first_sentence === 'string') return doc.first_sentence; if(typeof doc.first_sentence === 'object') return doc.first_sentence.value || '' }
+  if(doc.subtitle) return doc.subtitle;
+  if(doc.description) return (typeof doc.description==='string'?doc.description:(doc.description.value||''));
+  return '';
+}
+
+/* ---------- UI helpers ---------- */
+function renderStarsDisplay(avg){
+  const full = Math.round(avg); let starsHtml = '';
+  for(let i=1;i<=5;i++){ starsHtml += `<span class="${i<=full?'star':'star-empty'}">&#9733;</span>`; }
+  const boldAvg = `<span class="rating-bold"><strong>${avg?avg:'0.00'}</strong></span>`;
+  return `<span class="rating-inline">${starsHtml} ${boldAvg}</span>`;
+}
+
+/* ---------- Render grid ---------- */
+function renderBooks(docs,title){
+  seedReviewsForDocs(docs);
+  bookGrid.innerHTML = '';
+  if(!docs||!docs.length){ noResults.classList.remove('hidden'); setStatus('No results'); return; }
+  noResults.classList.add('hidden');
+  const heading = document.createElement('h2'); heading.textContent = title || `Results (${docs.length})`; heading.style='grid-column:1/-1;text-align:left;margin:6px 0;color:var(--muted)';
+  bookGrid.appendChild(heading);
+
+  docs.forEach(book=>{
+    const cover = makeCover(book.cover_i || book.cover_id);
+    const rv = getReviewsFor(book.key); const rvCount = rv.length; const avg = getAverageRating(book.key);
+    const rvSnippet = rvCount? rv[0].text.slice(0,120) + (rv[0].text.length>120?'...':'') : '';
+    const el = document.createElement('article'); el.className='bookCard';
+    el.innerHTML = `
+      <img loading="lazy" src="${cover}" alt="${escapeHtml(book.title)}">
+      <div class="card-body">
+        <h4>${escapeHtml(book.title)}</h4>
+        <p style="font-size:12px;color:var(--muted)">${escapeHtml((book.author_name||[]).slice(0,2).join(', '))}${book.first_publish_year?(' • '+book.first_publish_year):''}</p>
+        <div style="margin-top:6px">${avg?renderStarsDisplay(avg):'<span style="color:var(--muted)"><strong>No ratings</strong></span>'} <span style="font-size:12px;color:var(--muted);margin-left:8px">(${rvCount})</span></div>
+        ${rvSnippet?('<p style="margin-top:6px;font-size:13px;color:var(--muted)">'+escapeHtml(rvSnippet)+'</p>') : ''}
+        <div class="card-actions"><button class="small btn add">Add</button><button class="small ghost details">Details</button></div>
+      </div>`;
+    el.querySelector('.add').addEventListener('click', e=>{ e.stopPropagation(); addToReading(book); });
+    el.querySelector('.details').addEventListener('click', e=>{ e.stopPropagation(); showDetails(book, {focusReview:false}); });
+    const reviewBtn = document.createElement('button'); reviewBtn.className='small ghost'; reviewBtn.textContent='Review'; reviewBtn.addEventListener('click', e=>{ e.stopPropagation(); showDetails(book, {focusReview:true}); });
+    el.querySelector('.card-actions').appendChild(reviewBtn);
+    el.addEventListener('click', ()=> showDetails(book, {focusReview:false}));
+    bookGrid.appendChild(el);
+  });
+}
+
+/* ---------- Reading drawer ---------- */
+function renderReading(){
+  listItems.innerHTML='';
+  if(readingList.length===0){ listItems.innerHTML='<p style="color:var(--muted)">No saved books yet.</p>'; return; }
+  readingList.forEach(item=>{
+    const row = document.createElement('div'); row.className='item'; row.style='display:flex;gap:8px;align-items:center;padding:8px;border-radius:8px';
+    row.innerHTML = `<img src="${makeCover(item.cover_i||item.cover_id)}" style="width:44px;height:66px;object-fit:cover;border-radius:6px"><div style="flex:1"><div style="font-size:13px">${escapeHtml(item.title)}</div><div style="font-size:12px;color:var(--muted)">${escapeHtml((item.author_name||[]).slice(0,1).join(', '))}</div></div><div style="display:flex;gap:6px"><button class='ghost open-details tiny'>Details</button><button class='ghost remove tiny' data-key='${item.key}'>Remove</button></div>`;
+    row.querySelector('.remove').onclick = ()=>{ readingList = readingList.filter(r=>r.key!==item.key); localStorage.setItem('bookworm_reading', JSON.stringify(readingList)); renderReading(); };
+    row.querySelector('.open-details').onclick = ()=> showDetails(item, {focusReview:false});
+    listItems.appendChild(row);
+  });
+}
+function addToReading(book){ if(readingList.some(b=>b.key===book.key)){ alert('Already saved'); return; } readingList.unshift(book); localStorage.setItem('bookworm_reading', JSON.stringify(readingList)); renderReading(); alert('Saved to reading list'); }
+
+/* ---------- Details modal (stars input) ---------- */
+async function showDetails(book, opts={focusReview:false, prefetched:false, shortDesc:''}){
+  const modalBg = document.createElement('div'); modalBg.style='position:fixed;inset:0;background:rgba(2,6,23,0.7);display:flex;justify-content:center;align-items:center;z-index:1500;padding:20px';
+  const modal = document.createElement('div'); modal.style='background:var(--card);padding:16px;border-radius:10px;max-width:720px;max-height:80vh;overflow:auto;color:var(--text)';
+  modal.innerHTML = `<button id='close' style='float:right;background:#ef4444;color:white;border:none;padding:6px;border-radius:6px;cursor:pointer'>Close</button>
+    <h3>${escapeHtml(book.title)}</h3>
+    <p style="color:var(--muted)">${escapeHtml((book.author_name||[]).join(', '))} • ${book.first_publish_year||'N/A'}</p>
+    <div id='desc'>Loading...</div>
+    <div style="margin-top:10px"><button id='addNow' class='btn'>Add to Reading List</button><a href='https://openlibrary.org${book.key}' target='_blank' rel='noopener noreferrer' class='ghost' style='margin-left:8px;padding:8px 10px;border-radius:8px;text-decoration:none'>Open</a></div>`;
+  const reviewsWrap = document.createElement('div'); reviewsWrap.style.marginTop='12px';
+  modal.appendChild(reviewsWrap); modalBg.appendChild(modal); document.body.appendChild(modalBg);
+  modal.querySelector('#close').onclick = ()=> modalBg.remove(); modalBg.onclick = e=>{ if(e.target===modalBg) modalBg.remove() };
+  modal.querySelector('#addNow').onclick = ()=> addToReading(book);
+
+  if(opts.prefetched && opts.shortDesc){ modal.querySelector('#desc').innerText = opts.shortDesc; }
+  else {
+    try{ const r = await fetch(`https://openlibrary.org${book.key}.json`); if(r.ok){ const data = await r.json(); const desc = data.description ? (typeof data.description==='string'?data.description:data.description.value) : (data.excerpts? (Array.isArray(data.excerpts)?data.excerpts.map(x=>x.text||'').join('\n'):'') : 'No summary.'); modal.querySelector('#desc').innerText = desc||'No summary.' } else modal.querySelector('#desc').innerText='No summary.' } catch(e){ modal.querySelector('#desc').innerText='No summary.' }
+  }
+
+  seedReviewsForDocs([book]); // ensure seeded reviews exist
+
+  function renderReviewsUI(){
+    reviewsWrap.innerHTML = '';
+    const avg = getAverageRating(book.key);
+    const heading = document.createElement('div'); heading.style.display='flex'; heading.style.justifyContent='space-between'; heading.style.alignItems='center';
+    heading.innerHTML = `<div><strong>Reviews</strong><div style="margin-top:6px">${avg?renderStarsDisplay(avg):'<span style="color:var(--muted)"><strong>No ratings</strong></span>'} <span style="font-size:12px;color:var(--muted);margin-left:8px">(${(reviews[book.key]||[]).length})</span></div></div><button class='ghost tiny' id='exportReviewsBtn'>Export</button>`;
+    reviewsWrap.appendChild(heading);
+
+    const list = document.createElement('div'); list.className='review-list';
+    const rv = getReviewsFor(book.key);
+    if(rv.length===0) list.innerHTML = '<p style="color:var(--muted)">No reviews yet — be the first to add one!</p>';
+    rv.forEach(r=>{
+      const node = document.createElement('div'); node.className='review';
+      const meta = document.createElement('div'); meta.className='meta'; meta.textContent = `${new Date(r.ts).toLocaleString()} — Rating: ${r.rating||0}/5`;
+      const text = document.createElement('div'); text.className='text'; text.textContent = r.text;
+      const actions = document.createElement('div'); actions.style.display='flex'; actions.style.gap='8px'; actions.style.marginTop='8px';
+      const del = document.createElement('button'); del.className='tiny ghost'; del.textContent='Delete'; del.onclick = ()=>{ if(confirm('Delete this review?')){ removeReview(book.key, r.id); renderReviewsUI(); } };
+      const edit = document.createElement('button'); edit.className='tiny btn'; edit.textContent='Edit';
+      edit.onclick = ()=>{
+        node.innerHTML = '';
+        const ta = document.createElement('textarea'); ta.style.width='100%'; ta.style.minHeight='80px'; ta.value = r.text;
+        const starsRow = createStarInput(r.rating||0);
+        const save = document.createElement('button'); save.className='btn'; save.textContent='Save';
+        const cancel = document.createElement('button'); cancel.className='ghost'; cancel.textContent='Cancel';
+        const row2 = document.createElement('div'); row2.style.display='flex'; row2.style.gap='8px'; row2.style.marginTop='8px'; row2.appendChild(starsRow); row2.appendChild(save); row2.appendChild(cancel);
+        node.appendChild(ta); node.appendChild(row2);
+        save.onclick = ()=>{ const newRating = Number(starsRow.getAttribute('data-value')||0); editReview(book.key, r.id, ta.value, newRating); renderReviewsUI(); searchAndRender(currentPage); };
+        cancel.onclick = ()=> renderReviewsUI();
+      };
+      actions.appendChild(edit); actions.appendChild(del);
+      node.appendChild(meta); node.appendChild(text); node.appendChild(actions);
+      list.appendChild(node);
+    });
+    reviewsWrap.appendChild(list);
+
+    const formWrap = document.createElement('div'); formWrap.style.marginTop='10px';
+    formWrap.innerHTML = `<textarea id='newReview' placeholder='Write your review...' style='width:100%;min-height:80px;padding:8px;border-radius:8px;border:1px solid rgba(0,0,0,0.06)'></textarea>`;
+    const starsRow = createStarInput(5);
+    const controls = document.createElement('div'); controls.style.display='flex'; controls.style.gap='8px'; controls.style.marginTop='8px'; controls.style.alignItems='center';
+    const label = document.createElement('div'); label.style.fontSize='13px'; label.style.color='var(--muted)'; label.textContent='Rating:';
+    const saveBtn = document.createElement('button'); saveBtn.className='btn'; saveBtn.textContent='Save review';
+    const cancelBtn = document.createElement('button'); cancelBtn.className='ghost'; cancelBtn.textContent='Cancel';
+    controls.appendChild(label); controls.appendChild(starsRow); controls.appendChild(saveBtn); controls.appendChild(cancelBtn);
+    formWrap.appendChild(controls); reviewsWrap.appendChild(formWrap);
+
+    saveBtn.onclick = ()=>{ const val = reviewsWrap.querySelector('#newReview').value; const rating = Number(starsRow.getAttribute('data-value')||0); if(!val || !val.trim()){ alert('Review cannot be empty'); return } addReview(book.key, val, rating); reviewsWrap.querySelector('#newReview').value=''; renderReviewsUI(); searchAndRender(currentPage); };
+    cancelBtn.onclick = ()=>{ reviewsWrap.querySelector('#newReview').value=''; };
+
+    document.getElementById('exportReviewsBtn').onclick = ()=>{ const rv = getReviewsFor(book.key); const blob = new Blob([JSON.stringify(rv,null,2)],{type:'application/json'}); const url = URL.createObjectURL(blob); const a = document.createElement('a'); a.href = url; a.download = `${(book.title||'book').replace(/[^a-z0-9]/gi,'_')}_reviews.json`; a.click(); URL.revokeObjectURL(url); };
+  }
+
+  renderReviewsUI();
+  if(opts.focusReview){ setTimeout(()=>{ const ta = modal.querySelector('#newReview'); if(ta) ta.focus(); },200); }
+}
+
+/* ---------- star input generator ---------- */
+function createStarInput(initial=0){
+  const wrap = document.createElement('div'); wrap.className='star-input'; wrap.setAttribute('data-value', initial||0);
+  for(let i=1;i<=5;i++){
+    const btn = document.createElement('button'); btn.type='button'; btn.className='star-btn'; btn.setAttribute('data-star', i); btn.innerHTML = '&#9733;'; btn.style.background='transparent'; btn.style.border='0'; btn.style.padding='2px'; btn.style.cursor='pointer';
+    const setVisual = (v)=>{ const stars = wrap.querySelectorAll('.star-btn'); stars.forEach(s=>{ const n = Number(s.getAttribute('data-star')); s.style.color = (n<=v)?getComputedStyle(document.documentElement).getPropertyValue('--star')||'#f6c543' : getComputedStyle(document.documentElement).getPropertyValue('--star-empty')||'#ddd'; }); wrap.setAttribute('data-value', v); };
+    btn.addEventListener('mouseenter', ()=> setVisual(Number(btn.getAttribute('data-star'))));
+    btn.addEventListener('mouseleave', ()=> setVisual(Number(wrap.getAttribute('data-value')||0)));
+    btn.addEventListener('click', ()=> setVisual(Number(btn.getAttribute('data-star'))));
+    wrap.appendChild(btn);
+  }
+  const initVal = Number(initial||0);
+  const stars = wrap.querySelectorAll('.star-btn');
+  stars.forEach(s=> s.style.color = (Number(s.getAttribute('data-star'))<=initVal)?getComputedStyle(document.documentElement).getPropertyValue('--star')||'#f6c543' : getComputedStyle(document.documentElement).getPropertyValue('--star-empty')||'#ddd');
+  wrap.setAttribute('data-value', initVal);
+  return wrap;
+}
+
+/* ---------- chat UI helpers ---------- */
+function createChatBubble(text, who='bot'){ const m = document.createElement('div'); m.className = 'msg ' + (who==='user'?'user':'bot'); m.textContent = text; chatMessages.appendChild(m); chatMessages.scrollTop = chatMessages.scrollHeight; return m }
+function createRichBubble(who='bot'){ const m = document.createElement('div'); m.className = 'msg ' + (who==='user'?'user':'bot'); chatMessages.appendChild(m); chatMessages.scrollTop = chatMessages.scrollHeight; return m }
+async function appendRecommendation(book){
+  const bubble = createRichBubble('bot'); bubble.innerHTML = '';
+  const container = document.createElement('div'); container.style.display='flex'; container.style.gap='8px'; container.style.alignItems='flex-start';
+  const img = document.createElement('img'); img.src = makeCover(book.cover_i||book.cover_id); img.style.width='56px'; img.style.height='84px'; img.style.objectFit='cover'; img.style.borderRadius='6px';
+  const right = document.createElement('div'); right.style.flex='1';
+  const short = getShortDescFromDoc(book) || '';
+  right.innerHTML = `<div style="font-weight:600">${escapeHtml(book.title)}</div><div style="color:var(--muted);font-size:13px">${escapeHtml((book.author_name||[]).slice(0,2).join(', '))}</div>${short?('<div style="font-size:12px;color:var(--muted);margin-top:6px">'+escapeHtml(short.slice(0,120))+(short.length>120?'...':'')+'</div>') : ''}`;
+  const actions = document.createElement('div'); actions.style.display='flex'; actions.style.gap='6px'; actions.style.marginTop='8px';
+  const viewBtn = document.createElement('button'); viewBtn.className='small ghost'; viewBtn.textContent='View';
+  viewBtn.onclick = ()=> showDetails(book, {prefetched: !!short, shortDesc: short, focusReview:false});
+  const addBtn = document.createElement('button'); addBtn.className='small btn'; addBtn.textContent='Add'; addBtn.onclick = ()=> addToReading(book);
+  actions.appendChild(viewBtn); actions.appendChild(addBtn);
+  right.appendChild(actions); container.appendChild(img); container.appendChild(right); bubble.appendChild(container);
+  chatMessages.scrollTop = chatMessages.scrollHeight;
+}
+
+/* ---------- chat intent handling ---------- */
+async function handleChat(text){
+  try{
+    createChatBubble('Searching...','bot');
+    const placeholders = Array.from(chatMessages.querySelectorAll('.msg.bot')).filter(n=>n.textContent==='Searching...'); placeholders.forEach(n=>n.remove());
+    const q = text.toLowerCase();
+    const genres = ['fantasy','science fiction','mystery','romance','history','biography','children','nonfiction'];
+    const foundGenre = genres.find(g => q.includes(g.split(' ')[0]));
+    if(foundGenre && (q.includes('recommend')||q.includes('suggest')||q.includes('give')||q.includes('i want'))){
+      createChatBubble(`Finding top ${foundGenre} books...`);
+      const {collected} = await fetchUntil({query:foundGenre,minCount:10,ebooks: q.includes('ebook')||q.includes('ebooks'),genre:foundGenre,maxPages:8});
+      if(!collected || collected.length===0){ createChatBubble(`Sorry — couldn't find ${foundGenre} books right now.`); return }
+      createChatBubble(`Here are ${Math.min(8,collected.length)} ${foundGenre} picks:`);
+      for(const b of collected.slice(0,8)) await appendRecommendation(b);
+      createChatBubble('Tip: click View to see details or Add to save to your reading list.');
+      return;
+    }
+    const sim = q.match(/similar to\s+["']?([^"']+)["']?/i);
+    if(sim){ const title = sim[1].trim(); createChatBubble(`Searching for books similar to "${title}"...`);
+      const sr = await fetchSearch(title,1,12,false); const hit = (sr.docs||[]).find(d=> (d.title||'').toLowerCase().includes(title.toLowerCase())); if(!hit){ createChatBubble(`Couldn't find a direct match for "${title}". Try a different title.`); return }
+      const subjects = hit.subject || hit.subjects || []; if(!subjects.length){ createChatBubble(`Found "${hit.title}" but it has no subjects to find similar books.`); return }
+      const subjStr = subjects.slice(0,6).join(' '); const {collected} = await fetchUntil({query:subjStr,minCount:10,ebooks:false,genre:null,maxPages:6}); const top = collected.filter(c=>c.key!==hit.key).slice(0,8);
+      createChatBubble(`Books similar to "${hit.title}":`); for(const b of top) await appendRecommendation(b); return; }
+    if(q.includes('reading list') || q.includes('my list') || q.includes('favorites')){ if(readingList.length===0) createChatBubble('Your reading list is empty. Add books using the Add button on any card.'); else { createChatBubble('Your saved books:'); for(const b of readingList.slice(0,8)) await appendRecommendation(b); } return; }
+    if(q.includes('help') || q.includes('what can you do')){ createChatBubble('I can recommend by genre, find books similar to a title, list your saved books, and search the Open Library. Try: "recommend fantasy books", "similar to Dune", or "show my reading list".'); return }
+    createChatBubble('Searching for that...'); const res = await fetchSearch(text,1,12,false); if(!res.docs || !res.docs.length){ createChatBubble('No results found for that query.'); return } createChatBubble('Top results:'); for(const b of res.docs.slice(0,6)) await appendRecommendation(b);
+  }catch(e){ console.error(e); createChatBubble('Sorry — something went wrong while processing your request.'); }
+}
+
+/* ---------- init & events ---------- */
+(async function init(){
+  renderReading();
+  setStatus('Loading trending...');
+  try{
+    const {collected} = await fetchUntil({query:'bestsellers',minCount:12,ebooks:false,maxPages:6});
+    renderBooks(collected.slice(0,12),'🔥 Trending Books');
+    setStatus('Ready');
+  }catch(e){ console.error(e); setStatus('Ready (network issues)') }
+})();
+
+function debounce(fn,ms){ let t; return (...a)=>{ clearTimeout(t); t=setTimeout(()=>fn(...a),ms) } }
+
+prevPage.addEventListener('click', ()=>{ if(currentPage>1) searchAndRender(currentPage-1) });
+nextPage.addEventListener('click', ()=>{ if(currentPage<totalPages) searchAndRender(currentPage+1) });
+searchInput.addEventListener('input', debounce(()=> searchAndRender(1), 650));
+genreSelect.addEventListener('change', ()=> searchAndRender(1));
+modeSelect.addEventListener('change', ()=> searchAndRender(1));
+sortSelect.addEventListener('change', ()=> searchAndRender(currentPage));
+clearFiltersBtn.addEventListener('click', ()=>{ searchInput.value=''; genreSelect.value=''; modeSelect.value='any'; sortSelect.value='relevance'; searchAndRender(1) });
+
+openReading.addEventListener('click', ()=>{ readingDrawer.classList.toggle('hidden'); renderReading(); });
+clearListBtn.addEventListener('click', ()=>{ if(confirm('Clear reading list?')){ readingList=[]; localStorage.setItem('bookworm_reading', JSON.stringify(readingList)); renderReading(); } });
+exportListBtn.addEventListener('click', ()=>{ const blob = new Blob([JSON.stringify(readingList,null,2)],{type:'application/json'}); const url = URL.createObjectURL(blob); const a = document.createElement('a'); a.href = url; a.download = 'reading-list.json'; a.click(); URL.revokeObjectURL(url); });
+
+toggleTheme.addEventListener('click', ()=>{ document.body.classList.toggle('dark'); localStorage.setItem('bookworm_theme', document.body.classList.contains('dark')?'dark':'light') });
+(function(){ const t = localStorage.getItem('bookworm_theme'); if(t==='dark') document.body.classList.add('dark') })();
+
+chatToggle.addEventListener('click', ()=>{ chatWindow.classList.toggle('hidden'); if(!chatWindow.classList.contains('hidden')) chatInput.focus(); });
+closeChat.addEventListener('click', ()=> chatWindow.classList.add('hidden'));
+chatInput.addEventListener('keydown', async e=>{ if(e.key==='Enter'){ const t = chatInput.value.trim(); if(!t) return; createChatBubble(t,'user'); chatInput.value=''; await handleChat(t); } });
+
+// Logout (clears user data and redirects to login page)
+logoutBtn.addEventListener('click', ()=>{ 
+  // Clear all user-related data
+  localStorage.removeItem('bookwormUser');
+  localStorage.removeItem('bookworm_token');
+  localStorage.removeItem('bookworm_reading');
+  localStorage.removeItem('bookworm_reviews');
+  
+  // Redirect to login page
+  window.location.href = '/login.html';
+  
+  // Prevent any further actions
+  return false;
+});
+
+// Placeholder search function used above
+async function searchAndRender(page=1){
+  try{
+    setStatus('Searching...');
+    const q = (searchInput.value || 'bestsellers').trim();
+    const genre = genreSelect.value; const mode = modeSelect.value; const ebooks = mode==='ebooks';
+    const query = genre? `${q} ${genre}` : q; lastQuery = query; currentPage = page;
+    const d = await fetchSearch(query, page, 24, ebooks);
+    const docs = d.docs || [];
+    let filtered = docs.filter(x=>{ if(mode==='cover' && !(x.cover_i||x.cover_id)) return false; return true; });
+    const sort = sortSelect.value;
+    if(sort==='title') filtered.sort((a,b)=>(a.title||'').localeCompare(b.title||''));
+    if(sort==='year_desc') filtered.sort((a,b)=>(b.first_publish_year||0)-(a.first_publish_year||0));
+    if(sort==='year_asc') filtered.sort((a,b)=>(a.first_publish_year||0)-(b.first_publish_year||0));
+    totalPages = Math.max(1, Math.ceil((d.numFound||filtered.length)/24));
+    pageInfo.textContent = `Page ${currentPage} / ${totalPages}`;
+    seedReviewsForDocs(filtered);
+    renderBooks(filtered, `Results for "${query}"`);
+    setStatus(`${d.numFound||filtered.length} results`);
+  }catch(err){ console.error(err); setStatus('Error fetching') }
+}
+
+</script>
+</body>
+</html>
